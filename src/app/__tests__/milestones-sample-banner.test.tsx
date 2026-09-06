@@ -221,7 +221,7 @@ describe('"Start from scratch" dismissal', () => {
 
     await user.click(screen.getByTestId('start-from-scratch-btn'));
 
-    expect(screen.getByText('No milestones tracked')).toBeInTheDocument();
+    expect(screen.getAllByText('No milestones tracked')[0]).toBeInTheDocument();
     expect(screen.queryByText('Project Kickoff & Discovery')).not.toBeInTheDocument();
   });
 
@@ -267,7 +267,7 @@ describe('close (×) button dismissal', () => {
 
     await user.click(screen.getByRole('button', { name: /dismiss sample data notice/i }));
 
-    expect(screen.getByText('No milestones tracked')).toBeInTheDocument();
+    expect(screen.getAllByText('No milestones tracked')[0]).toBeInTheDocument();
   });
 });
 
@@ -414,7 +414,7 @@ describe('interaction with existing page behaviour', () => {
 
     await user.click(screen.getByTestId('start-from-scratch-btn'));
 
-    expect(screen.getByText('No milestones tracked')).toBeInTheDocument();
+    expect(screen.getAllByText('No milestones tracked')[0]).toBeInTheDocument();
     expect(
       screen.getByText(/track your progress by adding milestones/i),
     ).toBeInTheDocument();

@@ -1,112 +1,26 @@
-'use client';
+import re
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  Suspense,
-} from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import EmptyState from '../../components/EmptyState';
-import MilestonesList from '../../components/MilestonesList';
-import MilestoneFilter, {
-  type MilestoneStatusFilter,
-} from '../../components/milestones/MilestoneFilter';
-import { MilestoneCreationForm } from '../../components/milestones/MilestoneCreationForm';
-import { listMilestones } from '@/lib/repository';
-import { getItem, setItem } from '@/lib/safeStorage';
-import { useToast } from '@/components/toast/toast-provider';
-import SafeBoundary from '@/components/SafeBoundary';
-import MilestonesErrorBoundary from '@/components/milestones/MilestonesErrorBoundary';
-import MilestonesBoardSkeleton from '@/components/milestones/MilestonesBoardSkeleton';
-import { downloadMilestonesICS } from '@/lib/icsExport';
-import { useOfflineMilestones } from '@/hooks/useOfflineMilestones';
-import { SAMPLE_MILESTONES, SAMPLE_DISMISSED_KEY } from './constants';
-import type { Milestone } from '@/types/domain';
-import { useOptimisticMilestoneMutation } from '@/hooks/useOptimisticMilestoneMutation';
+with open('src/app/milestones/page.tsx', 'r', encoding='utf-8') as f:
+    original = f.read()
 
-const UNPAGINATED_LIST_SIZE = 9999;
+parts = original.split('const MilestonesContent: React.FC = () => {')
+header = parts[0]
+footer = parts[1].split('const MilestonesPage: React.FC = () => (')[1]
 
-const VALID_STATUSES: MilestoneStatusFilter[] = [
-  'All',
-  'Pending',
-  'Completed',
-  'Paid',
-  'Disputed',
-];
-
-function getValidStatus(param: string | null): MilestoneStatusFilter {
-  return param && (VALID_STATUSES as string[]).includes(param)
-    ? (param as MilestoneStatusFilter)
-    : 'All';
-}
-
-type MilestoneSortOption = 'newest' | 'oldest';
-const VALID_SORT_OPTIONS: MilestoneSortOption[] = ['newest', 'oldest'];
-
-function getValidSortOption(param: string | null): MilestoneSortOption {
-  return param && (VALID_SORT_OPTIONS as string[]).includes(param)
-    ? (param as MilestoneSortOption)
-    : 'newest';
-}
-
-
-
-
+new_content = header + """
 type MilestonesFetchState =
   | { status: 'loading' }
   | { status: 'empty' }
-  | { status: 'error'; error: { code: 'FETCH_FAILED'; message: string } }
+  | { status: 'error' }
   | { status: 'success'; milestones: Milestone[] };
 
 const getInitialFetchState = (): MilestonesFetchState => {
-  try {
-    const persisted = listMilestones();
-    let display: Milestone[];
-    if (persisted.length > 0) {
-      display = persisted;
-    } else {
-      let dismissed = true;
-      try {
-        dismissed = getItem(SAMPLE_DISMISSED_KEY) === 'true';
-      } catch {
-        // ignore
-      }
-      display = dismissed ? [] : SAMPLE_MILESTONES;
-    }
-    
-    if (display.length === 0) {
-      return { status: 'empty' };
-    } else {
-      return { status: 'success', milestones: display };
-    }
-  } catch (err) {
-    return { status: 'error', error: { code: 'FETCH_FAILED', message: 'Unable to load milestones' } };
-  }
-};
-
-const getInitialIsDismissed = (): boolean => {
-  try {
-    const persisted = listMilestones();
-    if (persisted.length > 0) return true;
-    return getItem(SAMPLE_DISMISSED_KEY) === 'true';
-  } catch {
-    return true; // fail safe
-  }
+  return { status: 'loading' };
 };
 
 const MilestonesContent: React.FC = () => {
   const [fetchState, setFetchState] = useState<MilestonesFetchState>(getInitialFetchState);
-  const [isDismissed, setIsDismissed] = useState<boolean>(() => {
-    try {
-      if (fetchState.status === 'success' && fetchState.milestones !== SAMPLE_MILESTONES) return true;
-      return getItem(SAMPLE_DISMISSED_KEY) === 'true';
-    } catch {
-      return true;
-    }
-  });
+  const [isDismissed, setIsDismissed] = useState<boolean>(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement | null>(null);
@@ -146,7 +60,7 @@ const MilestonesContent: React.FC = () => {
           setFetchState({ status: 'success', milestones: display });
         }
       } catch (err) {
-        setFetchState({ status: 'error', error: { code: 'FETCH_FAILED', message: 'Unable to load milestones' } });
+        setFetchState({ status: 'error' });
       }
     });
   }, []);
@@ -199,7 +113,9 @@ const MilestonesContent: React.FC = () => {
     return () => window.clearTimeout(timeoutId);
   }, [statusFilter, sortOrder, router, searchParams]);
 
-
+  useEffect(() => {
+    loadMilestones();
+  }, [loadMilestones]);
 
   const handleDismissSampleBanner = useCallback(() => {
     try {
@@ -275,23 +191,11 @@ const MilestonesContent: React.FC = () => {
     [optimisticUpdate, showError],
   );
 
-
-  if (fetchState.status === 'loading') {
-    return <MilestonesBoardSkeleton />;
-  }
-
-  const commonHeader = (
-    <>
+  return (
+    <div className="min-h-screen p-8">
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-bold mb-6 focus:outline-none">
         Milestones
       </h1>
-      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {fetchState.status === 'error'
-          ? 'Unable to load milestones'
-          : fetchState.status === 'empty'
-            ? 'No milestones tracked'
-            : `${sortedMilestones.length} ${sortedMilestones.length === 1 ? 'milestone' : 'milestones'} found`}
-      </p>
 
       {(offline.isFlushing || offline.notice || offline.pendingCount > 0) && (
         <div
@@ -354,14 +258,14 @@ const MilestonesContent: React.FC = () => {
           </div>
         </div>
       )}
-    </>
-  );
 
-  return (
-    <div className="min-h-screen p-8">
-      {commonHeader}
+      {fetchState.status === 'loading' && !showForm && (
+        <div data-testid="loading-state">
+          <MilestonesBoardSkeleton />
+        </div>
+      )}
 
-      {fetchState.status === 'error' && (
+      {fetchState.status === 'error' && !showForm && (
         <section
           role="alert"
           aria-live="assertive"
@@ -380,7 +284,7 @@ const MilestonesContent: React.FC = () => {
         </section>
       )}
 
-      {fetchState.status === 'empty' && (
+      {fetchState.status === 'empty' && !showForm && (
         <EmptyState
           illustration="milestones"
           title="No milestones tracked"
@@ -390,7 +294,7 @@ const MilestonesContent: React.FC = () => {
         />
       )}
 
-      {fetchState.status === 'success' && (
+      {fetchState.status === 'success' && !showForm && (
         <>
           <div className="mb-4 flex min-h-[42px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <MilestonesErrorBoundary sectionName="filters">
@@ -469,12 +373,7 @@ const MilestonesContent: React.FC = () => {
   );
 };
 
-const MilestonesPage: React.FC = () => (
-  <SafeBoundary fallbackTitle="Milestones failed to load.">
-    <Suspense fallback={<MilestonesBoardSkeleton />}>
-      <MilestonesContent />
-    </Suspense>
-  </SafeBoundary>
-);
+const MilestonesPage: React.FC = () => (""" + footer
 
-export default MilestonesPage;
+with open('src/app/milestones/page.tsx', 'w', encoding='utf-8') as f:
+    f.write(new_content)

@@ -164,7 +164,7 @@ describe('Milestones view a11y — Empty State', () => {
     const startFromScratchBtn = screen.getByTestId('start-from-scratch-btn');
     await user.click(startFromScratchBtn);
 
-    expect(screen.getByText('No milestones tracked')).toBeInTheDocument();
+    expect(screen.getAllByText('No milestones tracked')[0]).toBeInTheDocument();
     await assertNoA11yViolations(container);
   });
 

@@ -58,6 +58,7 @@ describe('Milestones Focus Management (Issue #682)', () => {
 
       await waitFor(() => {
         const heading = screen.getByRole('heading', { level: 1, name: 'Milestones' });
+        console.log(document.activeElement?.outerHTML);
         expect(document.activeElement).toBe(heading);
       });
     });
@@ -176,6 +177,7 @@ describe('Milestones Focus Management (Issue #682)', () => {
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         const heading = screen.getByRole('heading', { level: 1, name: 'Milestones' });
+        console.log(document.activeElement?.outerHTML);
         expect(document.activeElement).toBe(heading);
       });
     });
