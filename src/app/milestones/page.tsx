@@ -26,6 +26,8 @@ import { useOfflineMilestones } from '@/hooks/useOfflineMilestones';
 import { SAMPLE_MILESTONES, SAMPLE_DISMISSED_KEY } from './constants';
 import type { Milestone } from '@/types/domain';
 import { useOptimisticMilestoneMutation } from '@/hooks/useOptimisticMilestoneMutation';
+import MilestoneSearchBar from '@/components/milestones/MilestoneSearchBar';
+import { useDebouncedMilestonesSearch } from '@/hooks/useDebouncedMilestonesSearch';
 
 const UNPAGINATED_LIST_SIZE = 9999;
 
@@ -139,10 +141,12 @@ const MilestonesContent: React.FC = () => {
   const showSampleBanner = isUsingSampleData && !isDismissed;
   const displayMilestones = isUsingSampleData && isDismissed ? [] : milestones;
 
+  const search = useDebouncedMilestonesSearch(displayMilestones);
+
   const filtered = useMemo(() => {
-    if (statusFilter === 'All') return displayMilestones;
-    return displayMilestones.filter((m) => m.status === statusFilter);
-  }, [displayMilestones, statusFilter]);
+    if (statusFilter === 'All') return search.results;
+    return search.results.filter((m) => m.status === statusFilter);
+  }, [search.results, statusFilter]);
 
   const sortedMilestones = useMemo(() => {
     const nextMilestones = [...filtered];
@@ -277,11 +281,20 @@ const MilestonesContent: React.FC = () => {
         <>
           <div className="mb-4 flex min-h-[42px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <MilestonesErrorBoundary sectionName="filters">
-              <MilestoneFilter
-                selected={statusFilter}
-                onChange={setStatusFilter}
-                resultCount={sortedMilestones.length}
-              />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <MilestoneSearchBar
+                  query={search.query}
+                  onChange={search.setQuery}
+                  onClear={search.clear}
+                  status={search.status}
+                  resultCount={sortedMilestones.length}
+                />
+                <MilestoneFilter
+                  selected={statusFilter}
+                  onChange={setStatusFilter}
+                  resultCount={sortedMilestones.length}
+                />
+              </div>
             </MilestonesErrorBoundary>
             <MilestonesErrorBoundary sectionName="actions">
               <div className="flex min-h-[42px] flex-wrap items-center gap-3">
@@ -322,15 +335,49 @@ const MilestonesContent: React.FC = () => {
             </MilestonesErrorBoundary>
           </div>
 
+          {search.status === 'error' && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              data-testid="milestones-search-error-banner"
+              className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 shadow-sm dark:border-red-500/20 dark:bg-red-500/5 dark:text-red-200"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">
+                  {search.error?.message || 'Failed to search milestones.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={search.retry}
+                  aria-label="Retry search"
+                  data-testid="retry-milestones-search-btn"
+                  className="rounded-xl bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500"
+                >
+                  Retry search
+                </button>
+              </div>
+            </div>
+          )}
+
           <MilestonesErrorBoundary sectionName="milestone list">
             {sortedMilestones.length === 0 ? (
-              <EmptyState
-                illustration="milestones"
-                title="No milestones match this filter"
-                description={`There are no ${statusFilter.toLowerCase()} milestones at the moment. Try a different filter or add a new milestone.`}
-                actionLabel="Add Milestone"
-                onAction={handleAddMilestone}
-              />
+              search.status === 'empty' || (search.debouncedQuery && search.results.length === 0) ? (
+                <EmptyState
+                  illustration="milestones"
+                  title="No milestones match your search"
+                  description={`We couldn't find any milestones matching "${search.query}". Try adjusting your query or clearing the search.`}
+                  actionLabel="Clear Search"
+                  onAction={search.clear}
+                />
+              ) : (
+                <EmptyState
+                  illustration="milestones"
+                  title="No milestones match this filter"
+                  description={`There are no ${statusFilter.toLowerCase()} milestones at the moment. Try a different filter or add a new milestone.`}
+                  actionLabel="Add Milestone"
+                  onAction={handleAddMilestone}
+                />
+              )
             ) : (
               <MilestonesList
                 milestones={sortedMilestones}
