@@ -22,6 +22,10 @@ import SafeBoundary from '@/components/SafeBoundary';
 import MilestonesErrorBoundary from '@/components/milestones/MilestonesErrorBoundary';
 import MilestonesBoardSkeleton from '@/components/milestones/MilestonesBoardSkeleton';
 import { downloadMilestonesICS } from '@/lib/icsExport';
+import {
+  exportMilestonesToCSV,
+  exportMilestonesToJSON,
+} from '@/lib/exportMilestones';
 import { useOfflineMilestones } from '@/hooks/useOfflineMilestones';
 import { SAMPLE_MILESTONES, SAMPLE_DISMISSED_KEY } from './constants';
 import type { Milestone } from '@/types/domain';
@@ -309,6 +313,26 @@ const MilestonesContent: React.FC = () => {
                 >
                   <span aria-hidden="true" className="mr-1">📅</span>
                   Add to Calendar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportMilestonesToCSV(sortedMilestones)}
+                  aria-label="Export milestones as CSV"
+                  data-testid="export-milestones-csv-btn"
+                  className="flex-shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                >
+                  <span aria-hidden="true" className="mr-1">📊</span>
+                  Export CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportMilestonesToJSON(sortedMilestones)}
+                  aria-label="Export milestones as JSON"
+                  data-testid="export-milestones-json-btn"
+                  className="flex-shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                >
+                  <span aria-hidden="true" className="mr-1">📄</span>
+                  Export JSON
                 </button>
                 <button
                   type="button"
