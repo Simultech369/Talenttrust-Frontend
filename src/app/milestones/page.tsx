@@ -82,18 +82,8 @@ const getInitialFetchState = (): MilestonesFetchState => {
     } else {
       return { status: 'success', milestones: display };
     }
-  } catch (err) {
-    return { status: 'error', error: { code: 'FETCH_FAILED', message: 'Unable to load milestones' } };
-  }
-};
-
-const getInitialIsDismissed = (): boolean => {
-  try {
-    const persisted = listMilestones();
-    if (persisted.length > 0) return true;
-    return getItem(SAMPLE_DISMISSED_KEY) === 'true';
   } catch {
-    return true; // fail safe
+    return { status: 'error', error: { code: 'FETCH_FAILED', message: 'Unable to load milestones' } };
   }
 };
 
@@ -145,7 +135,7 @@ const MilestonesContent: React.FC = () => {
         } else {
           setFetchState({ status: 'success', milestones: display });
         }
-      } catch (err) {
+      } catch {
         setFetchState({ status: 'error', error: { code: 'FETCH_FAILED', message: 'Unable to load milestones' } });
       }
     });
