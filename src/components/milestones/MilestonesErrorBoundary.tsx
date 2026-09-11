@@ -28,13 +28,12 @@ export interface MilestonesErrorBoundaryProps {
 interface State {
   hasError: boolean;
   retryKey: number;
-  error?: Error;
 }
 
 /** Public error code used by dashboards and tests without exposing internals. */
 export const MILESTONES_SECTION_ERROR_CODE = 'MILESTONES_SECTION_FAILED' as const;
 
-export type MilestonesSection = 'milestones' | 'filters' | 'actions' | 'milestone list';
+export type MilestonesSection = 'milestones' | 'filters' | 'actions' | 'milestone list' | 'milestone table';
 
 export interface MilestonesSectionErrorMeta extends Record<string, unknown> {
   code: typeof MILESTONES_SECTION_ERROR_CODE;
@@ -72,8 +71,8 @@ export default class MilestonesErrorBoundary extends Component<
   // Lifecycle
   // ------------------------------------------------------------------
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): Partial<State> {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
