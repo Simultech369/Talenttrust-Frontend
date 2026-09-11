@@ -21,17 +21,6 @@ exports[`MilestoneCreationForm matches the empty-state form structure 1`] = `
       novalidate=""
     >
       <div
-        class="milestone-form-live-region"
-      >
-        <div
-          aria-live="polite"
-          class="sr-only"
-          role="status"
-        >
-          Form is valid
-        </div>
-      </div>
-      <div
         class="mb-4 w-full"
       >
         <label
@@ -236,17 +225,6 @@ exports[`MilestoneCreationForm matches the loaded-state form structure with user
     <form
       novalidate=""
     >
-      <div
-        class="milestone-form-live-region"
-      >
-        <div
-          aria-live="polite"
-          class="sr-only"
-          role="status"
-        >
-          Form is valid
-        </div>
-      </div>
       <div
         class="mb-4 w-full"
       >
