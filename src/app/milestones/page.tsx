@@ -15,6 +15,7 @@ import MilestoneFilter, {
   type MilestoneStatusFilter,
 } from '../../components/milestones/MilestoneFilter';
 import { MilestoneCreationForm } from '../../components/milestones/MilestoneCreationForm';
+import MilestonesBoardTable from '@/components/milestones/MilestonesBoardTable';
 import { listMilestones } from '@/lib/repository';
 import { getItem, setItem } from '@/lib/safeStorage';
 import { useToast } from '@/components/toast/toast-provider';
@@ -52,8 +53,6 @@ function getValidSortOption(param: string | null): MilestoneSortOption {
     : 'newest';
 }
 
-
-
 const MilestonesContent: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>(SAMPLE_MILESTONES);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
@@ -79,12 +78,31 @@ const MilestonesContent: React.FC = () => {
     setMilestones,
   );
 
+  const viewMode = searchParams.get('view') || 'cards';
+  const isTableView = viewMode === 'table';
+
+  const handleViewChange = useCallback(
+    (mode: 'cards' | 'table') => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (mode === 'table') {
+        params.set('view', 'table');
+      } else {
+        params.delete('view');
+      }
+      const query = params.toString();
+      router.replace(query ? `?${query}` : '?');
+    },
+    [router, searchParams],
+  );
+
   useEffect(() => {
     setStatusFilter(getValidStatus(searchParams.get('status')));
     setSortOrder(getValidSortOption(searchParams.get('sort')));
   }, [searchParams]);
 
   useEffect(() => {
+    if (isTableView) return;
+
     const timeoutId = window.setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       if (statusFilter !== 'All') {
@@ -104,7 +122,7 @@ const MilestonesContent: React.FC = () => {
     }, 150);
 
     return () => window.clearTimeout(timeoutId);
-  }, [statusFilter, sortOrder, router, searchParams]);
+  }, [statusFilter, sortOrder, router, searchParams, isTableView]);
 
   useEffect(() => {
     const persisted = listMilestones();
@@ -147,19 +165,15 @@ const MilestonesContent: React.FC = () => {
   const sortedMilestones = useMemo(() => {
     const nextMilestones = [...filtered];
 
-    if (sortOrder === 'oldest') {
-      nextMilestones.sort((left, right) => {
-        const leftTime = left.dueDate ? Date.parse(left.dueDate) : Number.POSITIVE_INFINITY;
-        const rightTime = right.dueDate ? Date.parse(right.dueDate) : Number.POSITIVE_INFINITY;
-        return leftTime - rightTime;
-      });
-    } else {
-      nextMilestones.sort((left, right) => {
-        const leftTime = left.dueDate ? Date.parse(left.dueDate) : Number.NEGATIVE_INFINITY;
-        const rightTime = right.dueDate ? Date.parse(right.dueDate) : Number.NEGATIVE_INFINITY;
-        return rightTime - leftTime;
-      });
-    }
+    nextMilestones.sort((a, b) => {
+      const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+      const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+
+      if (sortOrder === 'newest') {
+        return dateB - dateA;
+      }
+      return dateA - dateB;
+    });
 
     return nextMilestones;
   }, [filtered, sortOrder]);
@@ -168,18 +182,21 @@ const MilestonesContent: React.FC = () => {
     setShowForm(true);
   }, []);
 
-  const handleSubmitMilestone = useCallback((milestone: Milestone) => {
-    const result = optimisticCreate(milestone);
-    if (!result.ok) {
+  const handleSubmitMilestone = useCallback(
+    (newMilestone: Milestone) => {
+      const result = optimisticCreate(newMilestone);
+      if (result.ok) {
+        setShowForm(false);
+        return;
+      }
       showError({
-        title: 'Unable to create milestone',
+        title: 'Unable to save milestone',
         description: result.error,
       });
-      return;
-    }
-    setShowForm(false);
-    setIsDismissed(true);
-  }, [optimisticCreate, showError]);
+    },
+    [optimisticCreate, showError],
+  );
+
   const handleCancelForm = useCallback(() => {
     setShowForm(false);
   }, []);
@@ -199,9 +216,41 @@ const MilestonesContent: React.FC = () => {
 
   return (
     <div className="min-h-screen p-8">
-      <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-bold mb-6 focus:outline-none">
-        Milestones
-      </h1>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-bold focus:outline-none">
+          Milestones
+        </h1>
+        <div
+          className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+          role="group"
+          aria-label="Milestone view mode"
+        >
+          <button
+            type="button"
+            onClick={() => handleViewChange('cards')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              !isTableView
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            aria-pressed={!isTableView}
+          >
+            Cards
+          </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange('table')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              isTableView
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            aria-pressed={isTableView}
+          >
+            Table
+          </button>
+        </div>
+      </div>
 
       {(offline.isFlushing || offline.notice || offline.pendingCount > 0) && (
         <div
@@ -273,6 +322,14 @@ const MilestonesContent: React.FC = () => {
           actionLabel="Add Milestone"
           onAction={handleAddMilestone}
         />
+      ) : isTableView ? (
+        <MilestonesErrorBoundary sectionName="milestone table">
+          <MilestonesBoardTable
+            milestones={displayMilestones}
+            onAddMilestone={handleAddMilestone}
+            pageSize={5}
+          />
+        </MilestonesErrorBoundary>
       ) : (
         <>
           <div className="mb-4 flex min-h-[42px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
