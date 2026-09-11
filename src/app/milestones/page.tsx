@@ -56,6 +56,8 @@ function getValidSortOption(param: string | null): MilestoneSortOption {
 
 
 
+const EMPTY_MILESTONES: Milestone[] = [];
+
 const MilestonesContent: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>(SAMPLE_MILESTONES);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
@@ -139,7 +141,7 @@ const MilestonesContent: React.FC = () => {
 
   const isUsingSampleData = milestones === SAMPLE_MILESTONES;
   const showSampleBanner = isUsingSampleData && !isDismissed;
-  const displayMilestones = isUsingSampleData && isDismissed ? [] : milestones;
+  const displayMilestones = isUsingSampleData && isDismissed ? EMPTY_MILESTONES : milestones;
 
   const search = useDebouncedMilestonesSearch(displayMilestones);
 

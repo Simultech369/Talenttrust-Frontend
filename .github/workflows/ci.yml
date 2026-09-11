@@ -28,9 +28,7 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npx jest --forceExit
-        env:
-          NODE_OPTIONS: --max_old_space_size=6144
+        run: npm test
 
       # Fail the build on high or critical advisories.
       # Re-run once on transient registry errors (exit code 2 = connectivity).

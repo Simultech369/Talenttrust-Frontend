@@ -97,7 +97,15 @@ export function useDebouncedMilestonesSearch(
   // If underlying milestones change while idle/empty query, keep results in sync
   useEffect(() => {
     if (!normalizeSearchQuery(queryRef.current)) {
-      setResults([...milestones]);
+      setResults((prev) => {
+        if (
+          prev.length === milestones.length &&
+          prev.every((m, i) => m.id === milestones[i]?.id)
+        ) {
+          return prev;
+        }
+        return [...milestones];
+      });
     }
   }, [milestones]);
 
